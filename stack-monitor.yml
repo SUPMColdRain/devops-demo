@@ -1,0 +1,80 @@
+version: '3.6'
+
+services:
+  node-exporter:
+    image: prom/node-exporter:v0.16.0
+    ports:
+      - 9100:9100
+    networks:
+      - monitor_cgi
+    volumes:
+      - /proc:/host/proc
+      - /sys:/host/sys
+      - /:/rootfs
+    deploy:
+      mode: global
+      restart_policy:
+        condition: on-failure
+
+  cadvisor:
+    image: google/cadvisor:v0.30.2
+    ports:
+      - 8090:8080
+    networks:
+      - monitor_cgi
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:rw
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+    deploy:
+      mode: global
+      restart_policy:
+        condition: on-failure
+
+  prometheus:
+    image: prom/prometheus:v2.3.1
+    ports:
+      - 9090:9090
+    networks:
+      - monitor_cgi
+    volumes:
+      - /c/Users/fried/WebstormProjects/studying-lab/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    deploy:
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints:
+          - node.role == manager
+          - node.hostname == manager2
+      restart_policy:
+        condition: on-failure
+
+  grafana:
+    image: grafana/grafana:5.2.0
+    ports:
+      - 3030:3000
+    networks:
+      - monitor_cgi
+    volumes:
+      - grafana_data:/var/lib/grafana
+    deploy:
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints:
+          - node.role == manager
+          - node.hostname == manager2
+      restart_policy:
+        condition: on-failure
+
+networks:
+  monitor_cgi:
+    external: false
+
+volumes:
+  prometheus_data:
+    external: true
+  grafana_data:
+    external: true
